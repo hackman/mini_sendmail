@@ -30,12 +30,12 @@ while (1) {
 		print $s "220 MM ESMTP Sniffer\n";
 		while ( <$s> ) {
 			print LOG $_;
-			if ($_ =~ /^DATA/) {
+			if ($_ =~ /^DATA/i) {
 				print $s "354 End data with <CR><LF>.<CR><LF>\n";
-			} elsif ($_ =~ /^QUIT$/) {
+			} elsif ($_ =~ /^QUIT/i) {
 				print $s "221 Bye\n";
 				close $s;
-			} elsif ($_ =~ /^\.$/) {
+			} elsif ($_ =~ /^\.\r\n$/) {
 				print $s "250 OK\n";
 			} else {
 				print $s "250 OK\n";
