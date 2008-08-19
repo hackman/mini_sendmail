@@ -576,7 +576,7 @@ static void add_recipient( char* message, int chars_to_remove ) {
 	char buf[1000];
 	char *to_buf = buffer;
 	int len = strlen(message) - chars_to_remove;
-	int sec_check=0;
+	int sec_check = 0;
 	int status;
 	// nulirame si bufera
  	memset(buffer, 0x00, sizeof(buffer));
@@ -586,11 +586,11 @@ static void add_recipient( char* message, int chars_to_remove ) {
 	// obhojdame message-a
 	while (len > 0) {
 		// skip whitespaces
-		if ( *message != ' ' && *message != '\t' ) {
+// 		if ( *message != ' ' && *message != '\t' ) {
 			if ( *message == ',' || *message == '\n' || *message == '\r' ) {
 				// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
  				if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
-					(void) snprintf( buf, sizeof(buf), "RCPT TO:<%s>", buffer );
+					(void) snprintf( buf, sizeof(buf), "RCPT TO: %s", buffer );
 					send_command( buf );
 					status = read_response();
 					if ( status != 250  && status != 251 ) {
@@ -611,14 +611,14 @@ static void add_recipient( char* message, int chars_to_remove ) {
 				if ( sec_check > 999 ) 
 					exit( 12 );
 				// kopirame tekushtta stoinost ot masiva message_pos v masiva to_buf
-				if ( *message != '<' && *message != '>' ) {
+// 				if ( *message != '<' && *message != '>' ) {
 					*to_buf = *message;
 					// mestim se na sledvashtata poziciq v masiva
 					to_buf++;
 					sec_check++;
-				}
+// 				}
 			}
-		}
+//		}
 		// mestim se na sledvashtiq char
 		message++;
 		len--;
