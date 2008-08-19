@@ -88,8 +88,8 @@ static char* slurp_message( void );
 #ifdef DO_RECEIVED
 static char* make_received( char* from, char* username, char* hostname );
 #endif /* DO_RECEIVED */
-static void parse_for_recipients( int argc, char** argv, char** envp, char* message );
-static void add_recipient( int argc, char** argv, char* recipient, int len );
+static void parse_for_recipients( char* message );
+static void add_recipient( char* recipient, int len );
 static int open_client_socket( void );
 static int read_response( void );
 static void send_command( char* command );
@@ -180,10 +180,10 @@ int main( int argc, char** argv , char** envp) {
 					for (h=i+1; h < argc; h++) {						
 						if ( argv[h] != NULL ) {
 							// Ako imam oshte edin argument sled tozi i toi ne zapochva s -
-							// to tozi ne e recepient
+							// to tozi ne e recipient
 							if ( argv[h+1] == NULL ) {
 								// Tui kato nqmam argumenti sled tekushtqt argument
-								// priemame che tova e recepient :)
+								// priemame che tova e recipient :)
 		
 								// ako tozi argument naistina sushtestvuva
 								if ( ( strlen(to) + strlen(argv[h]) ) < 1000 ) {
@@ -350,7 +350,7 @@ if ( debug )
 #ifdef RECEPIENT_DEBUG
     (void) snprintf( buf, sizeof(buf), "MAIL FROM: %s", from );
 #else
-    (void) snprintf( buf, sizeof(buf), "MAIL FROM:<%s>", from );
+    (void) snprintf( buf, sizeof(buf), "MAIL FROM: %s", from );
 #endif
     send_command( buf );
     status = read_response();
@@ -361,7 +361,7 @@ if ( debug )
 
     got_a_recipient = 0;
 	// TO
-	// Check the recepient for @ and only if we have it add the recepient
+	// Check the recipient for @ and only if we have it add the recipient
 	if ( strchr( to, '@' ) ) {
 /*		if ( strrchr( to, ' ' ) != NULL ) {
 			j = strlen( strrchr( to, ' ' ) );
@@ -399,10 +399,10 @@ if ( debug )
 		if ( debug ) 
 			printf("TO2: %s\n", to_buf);
 
-		add_recipient( argc, argv,  to_buf, strlen( to ) );
-	} else {
-		fprintf( stderr, "Invalid recepient(no @): %s\n", to );
-	}
+		add_recipient( to_buf, strlen( to_buf ) );
+	}/* else {
+		fprintf( stderr, "Invalid recipient(no @): %s\n", to );
+	}*/
 #ifdef RECEPIENT_DEBUG
     for ( ; argn < argc; ++argn ) {
 
@@ -414,12 +414,12 @@ if ( debug )
 		else
 			(void) snprintf( to, sizeof(to), "%s", fake_to );
 		fprintf( stderr, "RCP: %s\n", fake_to );
-		add_recipient( argc, argv, envp, fake_to, strlen( argv[argn] ) ); 
+		add_recipient( argc, argv, envp, fake_to, strlen( fake_to ) ); 
 
 	}
 #endif /* RECEPIENT_DEBUG */
     if ( parse_message )
-		parse_for_recipients( argc, argv, envp, message );
+		parse_for_recipients( message );
     if ( ! got_a_recipient ) {
 		(void) fprintf( stderr,  "%s: no recipients found\n", argv0 );
 		exit( 1 );
@@ -550,184 +550,80 @@ static char* make_received( char* from, char* username, char* hostname ) {
 #endif /* DO_RECEIVED */
 
 
-static void parse_for_recipients( int argc, char** argv, char** envp, char* message ) {
-    /* A little finite-state machine that parses the message, looking
-    ** for To:, Cc:, and Bcc: recipients.
-    */
-    int state;
-#define ST_BOL		0
-#define ST_OTHERHEAD	1
-#define ST_T		2
-#define ST_C		3
-#define ST_B		4
-#define ST_BC		5
-#define ST_RECIPHEAD	6
-#define ST_RECIPS	7
-    char* cp;
-    char* bcc;
-    char* recip;
-
-    state = ST_BOL;
-    bcc = (char*) 0;
-    for ( cp = message; *cp != '\0'; ++cp ) {
-		switch ( state ) {
-			case ST_BOL:
-				switch ( *cp ) {
-					case '\n':
-						return;
-					case 'T':
-					case 't':
-						state = ST_T;
-					break;
-					case 'C':
-					case 'c':
-						state = ST_C;
-					break;
-					case 'B':
-					case 'b':
-						state = ST_B;
-						bcc = cp;
-					break;
-					default:
-						state = ST_OTHERHEAD;
-					break;
-				}
-			break;
-			case ST_OTHERHEAD:
-				switch ( *cp ) {
-					case '\n':
-						state = ST_BOL;
-					break;
-				}
-			break;
-			case ST_T:
-				switch ( *cp ) {
-					case '\n':
-						state = ST_BOL;
-					break;
-					case 'O':
-					case 'o':
-						state = ST_RECIPHEAD;
-					break;
-					default:
-						state = ST_OTHERHEAD;
-					break;
-				}
-			break;
-			case ST_C:
-				switch ( *cp ) {
-					case '\n':
-						state = ST_BOL;
-					break;
-					case 'C':
-					case 'c':
-						state = ST_RECIPHEAD;
-					break;
-					default:
-						state = ST_OTHERHEAD;
-					break;
-				}
-			break;
-			case ST_B:
-				switch ( *cp ) {
-					case '\n':
-						state = ST_BOL;
-						bcc = (char*) 0;
-					break;
-					case 'C':
-					case 'c':
-						state = ST_BC;
-					break;
-					default:
-						state = ST_OTHERHEAD;
-						bcc = (char*) 0;
-					break;
-				}
-			break;
-			case ST_BC:
-				switch ( *cp ) {
-					case '\n':
-						state = ST_BOL;
-						bcc = (char*) 0;
-					break;
-					case 'C':
-					case 'c':
-						state = ST_RECIPHEAD;
-					break;
-					default:
-						state = ST_OTHERHEAD;
-						bcc = (char*) 0;
-					break;
-				}
-			break;
-			case ST_RECIPHEAD:
-				switch ( *cp ) {
-					case '\n':
-						state = ST_BOL;
-						bcc = (char*) 0;
-					break;
-					case ':':
-						state = ST_RECIPS;
-						recip = cp + 1;
-					break;
-					default:
-						state = ST_OTHERHEAD;
-						bcc = (char*) 0;
-					break;
-				}
-			break;
-			case ST_RECIPS:
-				switch ( *cp ) {
-					case '\n':
-						add_recipient( argc, argv, recip, ( cp - recip ) );
-						state = ST_BOL;
-						if ( bcc != (char*) 0 ) {
-							/* Elide the Bcc: line, and reset cp. */
-							(void) strcpy( bcc, cp + 1 );
-							cp = bcc - 1;
-							bcc = (char*) 0;
-						}
-					break;
-					case ',':
-						add_recipient( argc, argv, recip, ( cp - recip ) );
-						recip = cp + 1;
-					break;
-				}
-			break;
-		}
-	}
+static void parse_for_recipients( char* message ) {
+	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
+	// search for To:
+	if (pos = strstr(message, "TO:"))		to=pos;
+	if (pos = strstr(message, "To:"))		to=pos;
+	if (pos = strstr(message, "to:"))		to=pos;
+	// search for Cc:
+	if (pos = strstr(message, "CC:"))		cc=pos;
+	if (pos = strstr(message, "Cc:"))		cc=pos;
+	if (pos = strstr(message, "\ncc:"))		cc=pos;
+	// search for Bcc
+	if (pos = strstr(message, "BCC:"))		bcc=pos;
+	if (pos = strstr(message, "Bcc:"))		bcc=pos;
+	if (pos = strstr(message, "bcc:"))		bcc=pos;
+	// add the found recipients
+	if ( to )		add_recipient(to, 3);
+	if ( cc )		add_recipient(cc, 3);
+	if ( bcc )		add_recipient(bcc, 4);
 }
 
 
-static void add_recipient( int argc, char** argv, char* recipient, int len ) {
-    int status, i;
-    char buf[1000];
+static void add_recipient( char* message, int chars_to_remove ) {
+	char buffer[1000];
+	char buf[1000];
+	char *to_buf = buffer;
+	int len = strlen(message) - chars_to_remove;
+	int sec_check=0;
+	int status;
+	// nulirame si bufera
+ 	memset(buffer, 0x00, sizeof(buffer));
+	memset(buf, 0x00, sizeof(buf));
+	message += chars_to_remove;
 
-    /* Skip leading whitespace. */
+	// obhojdame message-a
+	while (len > 0) {
+		// skip whitespaces
+		if ( *message != ' ' && *message != '\t' ) {
+			if ( *message == ',' || *message == '\n' || *message == '\r' ) {
+				// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
+ 				if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
+					(void) snprintf( buf, sizeof(buf), "RCPT TO:<%s>", buffer );
+					send_command( buf );
+					status = read_response();
+					if ( status != 250  && status != 251 ) {
+						(void) fprintf( stderr,  "%s: unexpected response %d to RCPT TO command\n", argv0, status );
+// 						exit( 1 );
+					}
+					memset(buffer, 0x00, sizeof(buffer));
+					memset(buf, 0x00, sizeof(buf));
+					sec_check=0;
 
-    while ( len > 0 && ( *recipient == ' ' || *recipient == '\t' ) ) {
-		++recipient;
-		--len;
-
+				}
+				// nulirame poziciqta na bufera
+				to_buf = buffer;
+				// exitvame v kraq na reda i ne obrabotvame poveche redove
+				if ( *message == '\n' ) break;
+			} else {
+				// possible hacking attempt
+				if ( sec_check > 999 ) 
+					exit( 12 );
+				// kopirame tekushtta stoinost ot masiva message_pos v masiva to_buf
+				if ( *message != '<' && *message != '>' ) {
+					*to_buf = *message;
+					// mestim se na sledvashtata poziciq v masiva
+					to_buf++;
+					sec_check++;
+				}
+			}
+		}
+		// mestim se na sledvashtiq char
+		message++;
+		len--;
 	}
-    /* Strip off any angle brackets. */
-    while ( len > 0 && *recipient == '<' ) {
-		++recipient;
-		--len;
-	}
-    while ( len > 0 && recipient[len-1] == '>' )
-		--len;
-
-    (void) snprintf( buf, sizeof(buf), "RCPT TO: <%.*s>", len, recipient );
-    send_command( buf );
-    status = read_response();
-    if ( status != 250  && status != 251 ) {
-		(void) fprintf( stderr,  "%s: unexpected response %d to RCPT TO command\n", argv0, status );
-		if ( debug )
-			print_argv( argc, argv );
-		exit( 1 );
-	}
-    got_a_recipient = 1;
+	got_a_recipient++;
 }
 
 
