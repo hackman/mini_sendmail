@@ -144,11 +144,14 @@ int main( int argc, char** argv , char** envp) {
 	for (i=0; i < argc; i++) {
 			if ( strncmp( argv[i], "-d", 2 ) == 0 )
 				debug = 1;
-			else if ( strncmp( argv[i], "-i", 2 ) == 0 ||
+			else if ( strncmp( argv[i], "-V", 2 ) == 0 ) {
+				printf("Version: %s\n", VERSION);
+				return(0);
+			} else if ( strncmp( argv[i], "-i", 2 ) == 0 ||
 				 strncmp( argv[i], "-oi", 3 ) == 0 ||
 				 strcmp( argv[i], "--" ) == 0 ) {
 				if ( debug )
-					printf("Ignored!\n");	/* ignore */
+					printf("ARGV[%d](%s): Ignored!\n", i, argv[i]);	/* ignore */
 			} else if ( strncmp( argv[i], "--help", 6 ) == 0 ) {
 					printf("Usage: %s [-f name] [-v] [-d] [-t] [-T]\n", argv[0]);
 					printf("  -i, -oi and -- are ignored\n");
@@ -246,7 +249,15 @@ int main( int argc, char** argv , char** envp) {
 					server = &(argv[i][2]);
 				else if ( strncmp( argv[i], "-p", 2 ) == 0 && argv[i][2] != '\0' )
 					port = atoi( &(argv[i][2]) );		
+
 #endif /* DO_MINUS_SP */
+				
+				if ( ! got_a_recipient && i == argc-1 ) {
+					got_a_recipient++;
+					strcat(to_buf, argv[i]);
+					if ( debug )
+						printf("This has to be the TO %s\n", argv[i]);
+				}
 				if ( debug ) 
 					printf("ARGV[%d]: |%s| %d\n", i, argv[i], strlen(argv[i]));
 	}
@@ -359,7 +370,11 @@ if ( debug )
 		exit( 1 );
 	}
 
-    got_a_recipient = 0;
+	if ( got_a_recipient ) {
+		if ( debug )
+			printf("Sending first found recipient: %s\n", to_buf);
+		add_recipient( to_ptr, 0 );
+	}
 	// TO
 	// Check the recipient for @ and only if we have it add the recipient
 	if ( strchr( to, '@' ) ) {
@@ -552,22 +567,33 @@ static char* make_received( char* from, char* username, char* hostname ) {
 
 static void parse_for_recipients( char* message ) {
 	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
+
 	// search for To:
-	if (pos = strstr(message, "TO:"))		to=pos;
 	if (pos = strstr(message, "To:"))		to=pos;
-	if (pos = strstr(message, "to:"))		to=pos;
+	if (!to) 
+		if (pos = strstr(message, "to:"))	to=pos;
+	if (!to) 
+		if (pos = strstr(message, "TO:"))	to=pos;
+
+
 	// search for Cc:
-	if (pos = strstr(message, "CC:"))		cc=pos;
 	if (pos = strstr(message, "Cc:"))		cc=pos;
-	if (pos = strstr(message, "\ncc:"))		cc=pos;
+	if (!cc)
+		if (pos = strstr(message, "CC:"))	cc=pos;
+	if (!cc)
+		if (pos = strstr(message, "\ncc:"))	cc=pos;
+
 	// search for Bcc
-	if (pos = strstr(message, "BCC:"))		bcc=pos;
 	if (pos = strstr(message, "Bcc:"))		bcc=pos;
-	if (pos = strstr(message, "bcc:"))		bcc=pos;
-	// add the found recipients
-	if ( to )		add_recipient(to, 3);
-	if ( cc )		add_recipient(cc, 3);
-	if ( bcc )		add_recipient(bcc, 4);
+	if (!bcc)
+		if (pos = strstr(message, "BCC:"))	bcc=pos;
+	if (!bcc)
+		if (pos = strstr(message, "bcc:"))	bcc=pos;
+
+	// search for recipients in the found lines
+	if ( to )	add_recipient(to, 3);
+	if ( cc )	add_recipient(cc, 3);
+	if ( bcc )	add_recipient(bcc, 4);
 }
 
 
@@ -584,10 +610,10 @@ static void add_recipient( char* message, int chars_to_remove ) {
 	message += chars_to_remove;
 
 	// obhojdame message-a
-	while (len > 0) {
+	while (len >= 0) {
 		// skip whitespaces
 // 		if ( *message != ' ' && *message != '\t' ) {
-			if ( *message == ',' || *message == '\n' || *message == '\r' ) {
+			if ( *message == ',' || *message == '\n' || *message == '\r' || *message == '\0' ) {
 				// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
  				if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
 					(void) snprintf( buf, sizeof(buf), "RCPT TO: %s", buffer );
