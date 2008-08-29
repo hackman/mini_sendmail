@@ -66,10 +66,10 @@ static void add_recipient( char* message, int chars_to_remove ) {
 	message += chars_to_remove;
 
 	// obhojdame message-a
-	while (len > 0) {
+	while (len >= 0) {
 		// skip whitespaces
 // 		if ( *message != ' ' && *message != '\t' ) {
-			if ( *message == ',' || *message == '\n' || *message == '\r' ) {
+			if ( *message == ',' || *message == '\n' || *message == '\r' || *message == '\0' ) {
 				// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
  				if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
 					(void) snprintf( buf, sizeof(buf), "RCPT TO: %s", buffer );
