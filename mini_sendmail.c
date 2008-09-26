@@ -638,11 +638,12 @@ static void add_recipient( char* message, int chars_to_remove ) {
 					exit( 12 );
 				// kopirame tekushtta stoinost ot masiva message_pos v masiva to_buf
 // 				if ( *message != '<' && *message != '>' ) {
+ 				if ( *message != '"' ) {
 					*to_buf = *message;
 					// mestim se na sledvashtata poziciq v masiva
 					to_buf++;
 					sec_check++;
-// 				}
+ 				}
 			}
 //		}
 		// mestim se na sledvashtiq char
