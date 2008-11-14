@@ -102,21 +102,23 @@ static void show_error( char* cause );
 int main( int argc, char** argv , char** envp) {
     int argn;
 	int status;
-	int i, h, j, from_count = 0;
+	int i, h, j, from_count, idx = 0;
     char* message;
 #ifdef DO_RECEIVED
     char* received;
 #endif /* DO_RECEIVED */
     char* username;
-	char xuser[40];
-    char hostname[500];
+	char **ep;
+	char xuser[50] = "";
+	char xopt[5000] = "";
+    char hostname[500] = "";
     char from[1000] = "";
 // #ifdef RECEPIENT_DEBUG
 	char to[1000] = "";
 // #endif
 	char to_buf[1000] = "";
 	char *to_ptr = to_buf;
-    char buf[2000];
+    char buf[2000] = "";
 
     /* Parse args. */
     argv0 = argv[0];
@@ -133,6 +135,17 @@ int main( int argc, char** argv , char** envp) {
     debug = 0;
     timeout = DEFAULT_TIMEOUT;
     argn = 1;
+
+	char *safe_env_lst[] = {
+		"USER",
+		"SCRIPT_FILENAME",
+		"REQUEST_URI",
+		"PWD",
+		"REMOTE_ADDR",
+		"MESSAGE_ID"
+	};
+
+
 /*
 -fname		DONE
 -f name 	DONE
@@ -252,7 +265,7 @@ int main( int argc, char** argv , char** envp) {
 
 #endif /* DO_MINUS_SP */
 				
-				if ( ! got_a_recipient && i == argc-1 ) {
+				if ( ! got_a_recipient && i == argc-1 && parse_message != 1 ) {
 					got_a_recipient++;
 					strcat(to_buf, argv[i]);
 					if ( debug )
@@ -451,8 +464,19 @@ if ( debug )
     send_data( received );
 #endif /* DO_RECEIVED */
 	if (strlen(username) <= 20) 
-		snprintf( xuser, sizeof(xuser), "X-SG-User: %s\n", username);
+		sprintf( xuser, "X-SG-User: %s\n", username);
+
+ 	sprintf( xopt, "%s", "X-SG-Opt: ");
+    for (ep = envp; *ep; ep++)
+         for (idx = 0; idx<=5; idx++)
+			if (safe_env_lst[idx] && 
+				!strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx]))) {
+  				sprintf( xopt, "%s %s:%s ", xopt, safe_env_lst[idx], *ep);
+             }
+
+
  	send_data( xuser );
+	send_data( xopt );
     send_data( message );
     send_done();
     status = read_response();
