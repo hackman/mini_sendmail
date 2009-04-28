@@ -1,6 +1,6 @@
 /* mini_sendmail - accept email on behalf of real sendmail
 **
-** Copyright © 1999 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright ï¿½ 1999 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -275,16 +275,16 @@ int main( int argc, char** argv , char** envp) {
 					printf("ARGV[%d]: |%s| %d\n", i, argv[i], strlen(argv[i]));
 	}
 
-if ( timeout == 0 ) 
-	timeout = DEFAULT_TIMEOUT;
+	if ( timeout == 0 ) 
+		timeout = DEFAULT_TIMEOUT;
 
-if ( debug ) 
+	if ( debug ) 
 #ifdef DO_MINUS_SP
-	printf("parse_message: %d\nserver: %p port: %p/%d\ntimeout: %d verbose: %d\n", 
-		parse_message, server, port, port, timeout, verbose);
+		printf("parse_message: %d\nserver: %p port: %p/%d\ntimeout: %d verbose: %d\n", 
+			parse_message, server, port, port, timeout, verbose);
 #else
-	printf("parse_message: %d\ntimeout: %d verbose: %d\n", 
-		parse_message, timeout, verbose);
+		printf("parse_message: %d\ntimeout: %d verbose: %d\n", 
+			parse_message, timeout, verbose);
 #endif
 
 #ifdef DO_GETLOGIN
@@ -386,7 +386,7 @@ if ( debug )
 	if ( got_a_recipient ) {
 		if ( debug )
 			printf("Sending first found recipient: %s\n", to_buf);
-		add_recipient( to_ptr, 0 );
+		add_recipient( to_ptr, 0, envp );
 	}
 	// TO
 	// Check the recipient for @ and only if we have it add the recipient
@@ -427,7 +427,7 @@ if ( debug )
 		if ( debug ) 
 			printf("TO2: %s\n", to_buf);
 
-		add_recipient( to_buf, strlen( to_buf ) );
+		add_recipient( to_buf, strlen( to_buf ), envp );
 	}/* else {
 		fprintf( stderr, "Invalid recipient(no @): %s\n", to );
 	}*/
@@ -498,7 +498,7 @@ if ( debug )
 
 static int print_env(char** envp) {
 	int a = 0;
-    printf("The environment is as follows:\n");
+    fprintf( stderr, "The environment is as follows:\n");
     while (envp[a] != NULL) {
 //  		if (strstr(envp[a],"PWD") != NULL)
      	   fprintf( stderr, "   %s\n", envp[a++]);
@@ -615,9 +615,9 @@ static void parse_for_recipients( char* message ) {
 		if (pos = strstr(message, "bcc:"))	bcc=pos;
 
 	// search for recipients in the found lines
-	if ( to )	add_recipient(to, 3);
-	if ( cc )	add_recipient(cc, 3);
-	if ( bcc )	add_recipient(bcc, 4);
+	if ( to )	add_recipient( to, 3, envp );
+	if ( cc )	add_recipient( cc, 3, envp );
+	if ( bcc )	add_recipient( bcc, 4, envp );
 }
 
 
@@ -645,6 +645,7 @@ static void add_recipient( char* message, int chars_to_remove ) {
 					status = read_response();
 					if ( status != 250  && status != 251 ) {
 						(void) fprintf( stderr,  "%s: unexpected response %d to RCPT TO command\n", argv0, status );
+						print_env(envp);
 // 						exit( 1 );
 					}
 					memset(buffer, 0x00, sizeof(buffer));
