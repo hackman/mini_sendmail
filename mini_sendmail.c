@@ -88,8 +88,8 @@ static char* slurp_message( void );
 #ifdef DO_RECEIVED
 static char* make_received( char* from, char* username, char* hostname );
 #endif /* DO_RECEIVED */
-static void parse_for_recipients( char* message );
-static void add_recipient( char* recipient, int len );
+static void parse_for_recipients( char* message, char** envp );
+static void add_recipient( char* recipient, int len, char** envp );
 static int open_client_socket( void );
 static int read_response( void );
 static void send_command( char* command );
@@ -447,7 +447,7 @@ int main( int argc, char** argv , char** envp) {
 	}
 #endif /* RECEPIENT_DEBUG */
     if ( parse_message )
-		parse_for_recipients( message );
+		parse_for_recipients( message, envp );
     if ( ! got_a_recipient ) {
 		(void) fprintf( stderr,  "%s: no recipients found\n", argv0 );
 		exit( 1 );
@@ -589,15 +589,18 @@ static char* make_received( char* from, char* username, char* hostname ) {
 #endif /* DO_RECEIVED */
 
 
-static void parse_for_recipients( char* message ) {
+static void parse_for_recipients( char* message, char** envp ) {
 	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
-
 	// search for To:
-	if (pos = strstr(message, "To:"))		to=pos;
+	if ( pos = strstr(message, "\nTo:") ) {	
+		// skip the \n character
+		*++pos;
+		to=pos;
+	}
 	if (!to) 
-		if (pos = strstr(message, "to:"))	to=pos;
+		if ( pos = strstr(message, "to:"))	to=pos;
 	if (!to) 
-		if (pos = strstr(message, "TO:"))	to=pos;
+		if ( pos = strstr(message, "TO:"))	to=pos;
 
 
 	// search for Cc:
@@ -605,7 +608,11 @@ static void parse_for_recipients( char* message ) {
 	if (!cc)
 		if (pos = strstr(message, "CC:"))	cc=pos;
 	if (!cc)
-		if (pos = strstr(message, "\ncc:"))	cc=pos;
+		if (pos = strstr(message, "\ncc:"))	{
+			// skip the \n character
+			*++cc;
+			cc=pos;
+		}
 
 	// search for Bcc
 	if (pos = strstr(message, "Bcc:"))		bcc=pos;
@@ -621,13 +628,16 @@ static void parse_for_recipients( char* message ) {
 }
 
 
-static void add_recipient( char* message, int chars_to_remove ) {
+static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 	char buffer[1000];
 	char buf[1000];
 	char *to_buf = buffer;
 	int len = strlen(message) - chars_to_remove;
 	int sec_check = 0;
 	int status;
+	int found_char = 0;
+	int skip_to_comma = 0;
+
 	// nulirame si bufera
  	memset(buffer, 0x00, sizeof(buffer));
 	memset(buf, 0x00, sizeof(buf));
@@ -635,42 +645,61 @@ static void add_recipient( char* message, int chars_to_remove ) {
 
 	// obhojdame message-a
 	while (len >= 0) {
-		// skip whitespaces
-// 		if ( *message != ' ' && *message != '\t' ) {
-			if ( *message == ',' || *message == '\n' || *message == '\r' || *message == '\0' ) {
-				// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
- 				if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
-					(void) snprintf( buf, sizeof(buf), "RCPT TO: %s", buffer );
-					send_command( buf );
-					status = read_response();
-					if ( status != 250  && status != 251 ) {
-						(void) fprintf( stderr,  "%s: unexpected response %d to RCPT TO command\n", argv0, status );
-						print_env(envp);
-// 						exit( 1 );
-					}
-					memset(buffer, 0x00, sizeof(buffer));
-					memset(buf, 0x00, sizeof(buf));
-					sec_check=0;
-
+/* 
+  We have to match lines like these:
+	To: "mm@siteground.com" <mm@siteground.com>
+	To: "mm@siteground.com" <mm@siteground.com>, m.m@siteground.com
+*/
+		if ( *message == ',' || *message == '\n' || *message == '\r' || *message == '\0' ) {
+			if ( *message == ',' ) 
+				skip_to_comma = 0;
+			// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
+			if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
+				(void) snprintf( buf, sizeof(buf), "RCPT TO: %s", buffer );
+				send_command( buf );
+				status = read_response();
+				if ( status != 250  && status != 251 ) {
+					(void) fprintf( stderr,  "%s: unexpected response %d to RCPT TO command\n", argv0, status );
+//					print_env(envp);
+// 					exit( 1 );
 				}
-				// nulirame poziciqta na bufera
-				to_buf = buffer;
-				// exitvame v kraq na reda i ne obrabotvame poveche redove
-				if ( *message == '\n' ) break;
-			} else {
-				// possible hacking attempt
-				if ( sec_check > 999 ) 
-					exit( 12 );
-				// kopirame tekushtta stoinost ot masiva message_pos v masiva to_buf
-// 				if ( *message != '<' && *message != '>' ) {
- 				if ( *message != '"' ) {
-					*to_buf = *message;
-					// mestim se na sledvashtata poziciq v masiva
-					to_buf++;
-					sec_check++;
- 				}
+				memset(buffer, 0x00, sizeof(buffer));
+				memset(buf, 0x00, sizeof(buf));
+				sec_check=0;
 			}
-//		}
+			// nulirame poziciqta na bufera
+			to_buf = buffer;
+			// exitvame v kraq na reda i ne obrabotvame poveche redove
+			if ( *message == '\n' ) break;
+		} else {
+			// possible hacking attempt
+			if ( sec_check > 999 ) 
+				exit( 12 );
+			if ( skip_to_comma ) {
+				// mestim se na sledvashtiq char
+				message++;
+				len--;
+				continue;
+			}
+			if ( found_char == 0 && *message == '@' )
+				found_char = 1;
+			if ( found_char && *message == ' ' ) {
+				skip_to_comma = 1;
+				found_char = 0;
+				// mestim se na sledvashtiq char
+				message++;
+				len--;
+				continue;
+			}
+			// kopirame tekushtta stoinost ot masiva message_pos v masiva to_buf
+// 			if ( *message != '<' && *message != '>' ) {
+ 			if ( *message != '"' ) {
+				*to_buf = *message;
+				// mestim se na sledvashtata poziciq v masiva
+				to_buf++;
+				sec_check++;
+ 			}
+		}
 		// mestim se na sledvashtiq char
 		message++;
 		len--;
