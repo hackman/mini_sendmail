@@ -160,13 +160,14 @@ int main( int argc, char** argv , char** envp) {
 				printf("Version: %s\n", VERSION);
 				return(0);
 			} else if ( strncmp( argv[i], "-i", 2 ) == 0 ||
-				 strncmp( argv[i], "-oi", 3 ) == 0 ||
-				 strcmp( argv[i], "--" ) == 0 ) {
+				strncmp( argv[i], "-oi", 3 ) == 0 ||
+				strncmp( argv[i], "-n", 2 ) == 0 || 
+				strcmp( argv[i], "--") == 0 ) {
 				if ( debug )
 					printf("ARGV[%d](%s): Ignored!\n", i, argv[i]);	/* ignore */
 			} else if ( strncmp( argv[i], "--help", 6 ) == 0 ) {
 					printf("Usage: %s [-f name] [-v] [-d] [-t] [-T]\n", argv[0]);
-					printf("  -i, -oi and -- are ignored\n");
+					printf("  -i, -oi, -n and -- are ignored\n");
 					printf("  -d debug\n");
 					printf("  -v verbose\n");
 					printf("  -V version\n");
@@ -390,7 +391,7 @@ int main( int argc, char** argv , char** envp) {
 		else
 			(void) snprintf( to, sizeof(to), "%s", fake_to );
 		fprintf( stderr, "RCP: %s\n", fake_to );
-		add_recipient( argc, argv, envp, fake_to, strlen( fake_to ) ); 
+		add_recipient( argc, argv, envp ); 
 
 	}
 #endif /* RECEPIENT_DEBUG */
@@ -417,10 +418,8 @@ int main( int argc, char** argv , char** envp) {
  	sprintf( xopt, "%s", "X-SG-Opt: ");
 	for (ep = envp; *ep; ep++)
 		for (idx = 0; idx<=5; idx++)
-			if (safe_env_lst[idx] && 
-				!strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx]))) {
-				sprintf( xopt, "%s %s:%s ", xopt, safe_env_lst[idx], *ep);
-			}
+			if (safe_env_lst[idx] && !strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx]))) 
+				sprintf( xopt, "%s %s ", xopt, *ep);
 
  	send_data( xuser );
 	send_data( xopt );
@@ -536,11 +535,15 @@ static char* make_received( char* from, char* username, char* hostname ) {
 
 static void parse_for_recipients( char* message, char** envp ) {
 	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
+
 	// search for To:
-	if ( pos = strstr(message, "\nTo:") ) {	
-		// skip the \n character
-		*++pos;
-		to=pos;
+	if ( pos = strstr(message, "In-Reply-To:") ) {
+		pos += 12;
+		if ( pos = strstr(pos, "To:") )
+			to=pos;
+	} else {	
+		if ( pos = strstr(message, "To:") )
+			to=pos;
 	}
 	if (!to) 
 		if ( pos = strstr(message, "to:"))	to=pos;
