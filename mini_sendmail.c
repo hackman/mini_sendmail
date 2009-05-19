@@ -170,13 +170,13 @@ int main( int argc, char** argv , char** envp) {
 					printf("  -i, -oi and -- are ignored\n");
 					printf("  -d debug\n");
 					printf("  -v verbose\n");
+					printf("  -V version\n");
 					printf("  -T timeout (default: 60)\n");
 					printf("  -t parse the whole message searching for To: Cc: Bcc:\n");
 					printf("  -f can be used in any format if the last part of that is the email address\n");
 					printf("Version: %s\n", VERSION);
 					return(0);
-				}
-			else if ( strncmp( argv[i], "-t", 2 ) == 0 ) 
+			} else if ( strncmp( argv[i], "-t", 2 ) == 0 ) 
 				parse_message = 1;
 			else if ( strncmp( argv[i], "-T", 2 ) == 0 && argv[i][2] != '\0' )
 				timeout = atoi( &(argv[i][2]) );
@@ -189,8 +189,6 @@ int main( int argc, char** argv , char** envp) {
 							from[h-2] = argv[i][h];
 						if ( debug )
 							printf("FROM0: %s\n", from);
-					} else {
-
 					}
 				} else if ( strncmp( argv[i+1], "-", 1) != 0 ) {
 					for (h=i+1; h < argc; h++) {						
@@ -214,22 +212,14 @@ int main( int argc, char** argv , char** envp) {
 								}
 							} else {
 								if (strlen(from) + strlen(argv[h]) < 1000) {
-// 									if ( from_count == 0 ) {
-										for ( j=0; j <= strlen(argv[h]); j++) 
-											from[j] = argv[h][j];
-// 										from_count = j;
-/*									} else {
-										for ( j=0; j <= strlen(argv[h]); j++) 
-											from[j+from_count] = argv[h][j];
-										from_count += j;
-									}*/
+									for ( j=0; j <= strlen(argv[h]); j++) 
+										from[j] = argv[h][j];
 									if ( debug )
 										printf("FROM1: %s\t(%s), from_count: %d\n", from, argv[h], from_count);
 								} else {
 									(void) fprintf( stderr, "%s: FROM argument too long\n", argv0 );
 									return(1);
 								}
-
 								// Ako sledvashtiqt agument ne zapochva s -
 								// i ne e posleden, to neka go dobavim kum from-a
  								if ( strncmp( argv[h+1], "-", 1) != 0 && argv[h+2] != NULL ) {
@@ -237,15 +227,8 @@ int main( int argc, char** argv , char** envp) {
 								// argument-a sa po-malki ot 1000 to dobavi tekushtiqt
 								// cmd argument kum from
 									if (strlen(from) + strlen(argv[h+1]) < 1000) {
-// 										if ( from_count == 0 ) {
-											for ( j=0; j <= strlen(argv[h+1]); j++) 
-												from[j] = argv[h+1][j];
-// 										} else {
-// 											for ( j=0; j <= strlen(argv[h+1]); j++) 
-// 												from[j+from_count] = argv[h+1][j];
-// 											from_count += j;
-// 										}
-
+										for ( j=0; j <= strlen(argv[h+1]); j++) 
+											from[j] = argv[h+1][j];
 										if ( debug )
 											printf("FROM2: %s\t(%s), from_count: %d\n", from, argv[h+1], from_count);
 									} else {
@@ -262,9 +245,7 @@ int main( int argc, char** argv , char** envp) {
 					server = &(argv[i][2]);
 				else if ( strncmp( argv[i], "-p", 2 ) == 0 && argv[i][2] != '\0' )
 					port = atoi( &(argv[i][2]) );		
-
 #endif /* DO_MINUS_SP */
-				
 				if ( ! got_a_recipient && i == argc-1 && parse_message != 1 ) {
 					got_a_recipient++;
 					strcat(to_buf, argv[i]);
@@ -467,12 +448,12 @@ int main( int argc, char** argv , char** envp) {
 		sprintf( xuser, "X-SG-User: %s\n", username);
 
  	sprintf( xopt, "%s", "X-SG-Opt: ");
-    for (ep = envp; *ep; ep++)
-         for (idx = 0; idx<=5; idx++)
+	for (ep = envp; *ep; ep++)
+		for (idx = 0; idx<=5; idx++)
 			if (safe_env_lst[idx] && 
 				!strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx]))) {
-  				sprintf( xopt, "%s %s:%s ", xopt, safe_env_lst[idx], *ep);
-             }
+				sprintf( xopt, "%s %s:%s ", xopt, safe_env_lst[idx], *ep);
+			}
 
 
  	send_data( xuser );
@@ -504,6 +485,7 @@ static int print_env(char** envp) {
      	   fprintf( stderr, "   %s\n", envp[a++]);
 	}
 }
+
 static int print_argv(int argc, char** argv) {
 	int a;
     printf("There are %d arguments:\n", argc-1);
@@ -562,7 +544,6 @@ static char* slurp_message( void ) {
     return message;
 }
 
-
 #ifdef DO_RECEIVED
 static char* make_received( char* from, char* username, char* hostname ) {
     int received_size;
@@ -588,7 +569,6 @@ static char* make_received( char* from, char* username, char* hostname ) {
 }
 #endif /* DO_RECEIVED */
 
-
 static void parse_for_recipients( char* message, char** envp ) {
 	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
 	// search for To:
@@ -601,7 +581,6 @@ static void parse_for_recipients( char* message, char** envp ) {
 		if ( pos = strstr(message, "to:"))	to=pos;
 	if (!to) 
 		if ( pos = strstr(message, "TO:"))	to=pos;
-
 
 	// search for Cc:
 	if (pos = strstr(message, "Cc:"))		cc=pos;
@@ -720,7 +699,6 @@ static int open_client_socket( void ) {
 #endif /* USE_IPV6 */
     int sa_len, sock_family, sock_type, sock_protocol;
     int sockfd;
-
     sock_type = SOCK_STREAM;
     sock_protocol = 0;
     sa_len = sizeof(sa);
@@ -729,7 +707,7 @@ static int open_client_socket( void ) {
 #ifdef USE_IPV6
 
     {
-#ifdef DO_MINUS_SP
+#	ifdef DO_MINUS_SP
     struct sockaddr_in sa4;
     struct addrinfo hints;
     char portstr[10];
@@ -738,11 +716,11 @@ static int open_client_socket( void ) {
     struct addrinfo* ai2;
     struct addrinfo* aiv4;
     struct addrinfo* aiv6;
-#endif /* DO_MINUS_SP */
+#	endif /* DO_MINUS_SP */
 
     sock_family = PF_INET6;
 
-#ifdef DO_MINUS_SP
+#	ifdef DO_MINUS_SP
     (void) memset( (void*) &sa4, 0, sizeof(sa4) );
     if ( inet_pton( AF_INET, server, (void*) &sa4.sin_addr ) == 1 )	{
 		sock_family = PF_INET;
@@ -750,7 +728,7 @@ static int open_client_socket( void ) {
 		sa_len = sizeof(sa4);
 		(void) memmove( &sa, &sa4, sa_len );
 	} else if ( inet_pton( AF_INET6, server, (void*) &sa.sin6_addr ) != 1 ) {
-#ifdef DO_DNS
+#		ifdef DO_DNS
 	(void) memset( &hints, 0, sizeof(hints) );
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -808,15 +786,15 @@ static int open_client_socket( void ) {
 
 	ok:
 		freeaddrinfo( ai );
-#else /* DO_DNS */
+#		else /* DO_DNS */
         (void) fprintf( stderr, "%s: bad server IP address %s\n", argv0, server );
 		exit( 1 );
-#endif /* DO_DNS */
+#		endif /* DO_DNS */
 	}
-#else /* DO_MINUS_SP */
+#	else /* DO_MINUS_SP */
     sa.sin6_addr = in6addr_any;
     sa.sin6_port = htons( SMTP_PORT );
-#endif /* DO_MINUS_SP */
+#	endif /* DO_MINUS_SP */
 
     sa.sin6_family = sock_family;
 
@@ -825,19 +803,19 @@ static int open_client_socket( void ) {
 #else /* USE_IPV6 */
 
     {
-#ifdef DO_MINUS_SP
+#	ifdef DO_MINUS_SP
     struct hostent *he;
-#else /* DO_MINUS_SP */
+#	else /* DO_MINUS_SP */
     char local_addr[4] = { 127, 0, 0, 1 };
-#endif /* DO_MINUS_SP */
+#	endif /* DO_MINUS_SP */
 
     sock_family = PF_INET;
 
-#ifdef DO_MINUS_SP
+#	ifdef DO_MINUS_SP
     sa.sin_addr.s_addr = inet_addr( server );
     sa.sin_port = htons( port );
     if ( (int32_t) sa.sin_addr.s_addr == -1 ) {
-#ifdef DO_DNS
+#		ifdef DO_DNS
 		he = gethostbyname( server );
 		if ( he == (struct hostent*) 0 ) {
 		    (void) fprintf( stderr, "%s: server name lookup of '%s' failed - %s\n", argv0, server, hstrerror( h_errno ) );
@@ -845,19 +823,17 @@ static int open_client_socket( void ) {
 		}
 		sock_family = he->h_addrtype;
 		(void) memmove( &sa.sin_addr, he->h_addr, he->h_length );
-#else /* DO_DNS */
+#		else /* DO_DNS */
 		(void) fprintf( stderr, "%s: bad server IP address %s\n", argv0, server );
 		exit( 1 );
-#endif /* DO_DNS */
+#		endif /* DO_DNS */
 	}
-#else /* DO_MINUS_SP */
+#	else /* DO_MINUS_SP */
    		(void) memmove( &sa.sin_addr, local_addr, sizeof(local_addr) );
 	   	sa.sin_port = htons( SMTP_PORT );
-#endif /* DO_MINUS_SP */
-
+#	endif /* DO_MINUS_SP */
     	sa.sin_family = sock_family;
     }
-
 #endif /* USE_IPV6 */
 
     sockfd = socket( sock_family, sock_type, sock_protocol );
@@ -870,12 +846,10 @@ static int open_client_socket( void ) {
     return sockfd;
 }
 
-
 static int read_response( void ) {
     char buf[10000];
     char* cp;
     int status;
-
     for (;;) {
 		(void) alarm( timeout );
 		if ( fgets( buf, sizeof(buf), sockrfp ) == (char*) 0 ) {
@@ -897,7 +871,6 @@ static int read_response( void ) {
     return status;
 }
 
-
 static void send_command( char* command ) {
     (void) alarm( timeout );
     if ( verbose )
@@ -905,7 +878,6 @@ static void send_command( char* command ) {
 	(void) fprintf( sockwfp, "%s\r\n", command );
 	(void) fflush( sockwfp );
 }
-
 
 static void send_data( char* data ) {
     int bol;
@@ -924,18 +896,15 @@ static void send_data( char* data ) {
 		(void) fputs( "\r\n", sockwfp );
 }
 
-
 static void send_done( void ) {
     (void) fputs( ".\r\n", sockwfp );
     (void) fflush( sockwfp );
 }
 
-
 static void sigcatch( int sig ) {
     (void) fprintf( stderr, "%s: timed out\n", argv0 );
     exit( 1 );
 }
-
 
 static void show_error( char* cause ) {
     char buf[5000];
