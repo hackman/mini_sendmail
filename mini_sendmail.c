@@ -23,6 +23,11 @@
 ** LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 ** OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 ** SUCH DAMAGE.
+**
+** Copyright 2008-2009 by Marian Marinov <mm@yuhu.biz>
+** The software have been havily modified to fit more complex needs.
+** The above licence rules still remain the same.
+**
 */
 
 
@@ -151,7 +156,7 @@ int main( int argc, char** argv , char** envp) {
 -f name user@domain
 -f <name> user@domain
 -f '' user@domain
--f "" user@domain 
+-f "" user@domain
 */
 	for (i=0; i < argc; i++) {
 			if ( strncmp( argv[i], "-d", 2 ) == 0 )
@@ -161,7 +166,7 @@ int main( int argc, char** argv , char** envp) {
 				return(0);
 			} else if ( strncmp( argv[i], "-i", 2 ) == 0 ||
 				strncmp( argv[i], "-oi", 3 ) == 0 ||
-				strncmp( argv[i], "-n", 2 ) == 0 || 
+				strncmp( argv[i], "-n", 2 ) == 0 ||
 				strcmp( argv[i], "--") == 0 ) {
 				if ( debug )
 					printf("ARGV[%d](%s): Ignored!\n", i, argv[i]);	/* ignore */
@@ -176,7 +181,7 @@ int main( int argc, char** argv , char** envp) {
 					printf("  -f can be used in any format if the last part of that is the email address\n");
 					printf("Version: %s\n", VERSION);
 					return(0);
-			} else if ( strncmp( argv[i], "-t", 2 ) == 0 ) 
+			} else if ( strncmp( argv[i], "-t", 2 ) == 0 )
 				parse_message = 1;
 			else if ( strncmp( argv[i], "-T", 2 ) == 0 && argv[i][2] != '\0' )
 				timeout = atoi( &(argv[i][2]) );
@@ -185,22 +190,22 @@ int main( int argc, char** argv , char** envp) {
 			else if ( strncmp( argv[i], "-f", 2 ) == 0)
 				if ( argv[i][2] != '\0' ) {
 					if ( strlen(argv[i]) < 998 ) {
-						for ( h=2; h <= strlen(argv[i]); h++) 
+						for ( h=2; h <= strlen(argv[i]); h++)
 							from[h-2] = argv[i][h];
 						if ( debug )
 							printf("FROM0: %s\n", from);
 					}
 				} else if ( strncmp( argv[i+1], "-", 1) != 0 ) {
-					for (h=i+1; h < argc; h++) {						
+					for (h=i+1; h < argc; h++) {
 						if ( argv[h] != NULL ) {
 							// Ako imam oshte edin argument sled tozi i toi ne zapochva s -
 							// to tozi ne e recipient
 							if ( argv[h+1] == NULL ) {
 								// Tui kato nqmam argumenti sled tekushtqt argument
-								// priemame che tova e recipient :)		
+								// priemame che tova e recipient :)
 								// ako tozi argument naistina sushtestvuva
 								if ( ( strlen(to) + strlen(argv[h]) ) < 1000 ) {
-									for ( j=0; j <= strlen(argv[h]); j++) 
+									for ( j=0; j <= strlen(argv[h]); j++)
 										to[j] = argv[h][j];
 									if ( debug )
 										printf("TO0: %s (%s)\n", to, argv[h]);
@@ -210,7 +215,7 @@ int main( int argc, char** argv , char** envp) {
 								}
 							} else {
 								if (strlen(from) + strlen(argv[h]) < 1000) {
-									for ( j=0; j <= strlen(argv[h]); j++) 
+									for ( j=0; j <= strlen(argv[h]); j++)
 										from[j] = argv[h][j];
 									if ( debug )
 										printf("FROM1: %s\t(%s), from_count: %d\n", from, argv[h], from_count);
@@ -221,11 +226,11 @@ int main( int argc, char** argv , char** envp) {
 								// Ako sledvashtiqt agument ne zapochva s -
 								// i ne e posleden, to neka go dobavim kum from-a
  								if ( strncmp( argv[h+1], "-", 1) != 0 && argv[h+2] != NULL ) {
-								// Ako cqlostnata duljina na tekushtiqt string + cmd 
+								// Ako cqlostnata duljina na tekushtiqt string + cmd
 								// argument-a sa po-malki ot 1000 to dobavi tekushtiqt
 								// cmd argument kum from
 									if (strlen(from) + strlen(argv[h+1]) < 1000) {
-										for ( j=0; j <= strlen(argv[h+1]); j++) 
+										for ( j=0; j <= strlen(argv[h+1]); j++)
 											from[j] = argv[h+1][j];
 										if ( debug )
 											printf("FROM2: %s\t(%s), from_count: %d\n", from, argv[h+1], from_count);
@@ -242,7 +247,7 @@ int main( int argc, char** argv , char** envp) {
 				else if ( strncmp( argv[i], "-s", 2 ) == 0 && argv[i][2] != '\0' )
 					server = &(argv[i][2]);
 				else if ( strncmp( argv[i], "-p", 2 ) == 0 && argv[i][2] != '\0' )
-					port = atoi( &(argv[i][2]) );		
+					port = atoi( &(argv[i][2]) );
 #endif /* DO_MINUS_SP */
 				if ( ! got_a_recipient && i == argc-1 && parse_message != 1 ) {
 					got_a_recipient++;
@@ -250,19 +255,19 @@ int main( int argc, char** argv , char** envp) {
 					if ( debug )
 						printf("This has to be the TO %s\n", argv[i]);
 				}
-				if ( debug ) 
+				if ( debug )
 					printf("ARGV[%d]: |%s| %d\n", i, argv[i], strlen(argv[i]));
 	}
 
-	if ( timeout == 0 ) 
+	if ( timeout == 0 )
 		timeout = DEFAULT_TIMEOUT;
 
-	if ( debug ) 
+	if ( debug )
 #ifdef DO_MINUS_SP
-		printf("parse_message: %d\nserver: %p port: %p/%d\ntimeout: %d verbose: %d\n", 
+		printf("parse_message: %d\nserver: %p port: %p/%d\ntimeout: %d verbose: %d\n",
 			parse_message, server, port, port, timeout, verbose);
 #else
-		printf("parse_message: %d\ntimeout: %d verbose: %d\n", 
+		printf("parse_message: %d\ntimeout: %d verbose: %d\n",
 			parse_message, timeout, verbose);
 #endif
 
@@ -292,12 +297,12 @@ int main( int argc, char** argv , char** envp) {
 	} else {
 		// Ako nqmame @ znachi trqbva da fake-nem from-a
 		if ( strchr( from, '@' ) == (char*) 0 ) {
-			if ( debug ) 
+			if ( debug )
 				printf("Sho go zamestvash toq email sega??\n");
 			h = strlen(from);
 			from[h] = '@';
 			h++;
-			for (i=0; i<=strlen(hostname); i++) 
+			for (i=0; i<=strlen(hostname); i++)
 				from[i+h] = hostname[i];
 		}
 	}
@@ -359,7 +364,7 @@ int main( int argc, char** argv , char** envp) {
 	// Check the recipient for @ and only if we have it add the recipient
 	if ( strchr( to, '@' ) ) {
 		j = strlen( to );
-		if ( debug ) 
+		if ( debug )
 			printf("TO: %s\n", to, j);
 		h=0;
 		for (i=0; i <= j; i++) {
@@ -369,14 +374,14 @@ int main( int argc, char** argv , char** envp) {
 		from_count=0;
 		for (i=0; i <= j; i++) {
 			if ( to[i+h] != '"' &&
-				to[i+h] != '<' && 
+				to[i+h] != '<' &&
 				to[i+h] != '>' &&
 				to[i+h] != ' ' ) {
  				to_buf[from_count] = to[i+h];
 				from_count++;
 			}
 		}
-		if ( debug ) 
+		if ( debug )
 			printf("TO2: %s\n", to_buf);
 		add_recipient( to_buf, strlen( to_buf ), envp );
 	}
@@ -391,12 +396,15 @@ int main( int argc, char** argv , char** envp) {
 		else
 			(void) snprintf( to, sizeof(to), "%s", fake_to );
 		fprintf( stderr, "RCP: %s\n", fake_to );
-		add_recipient( argc, argv, envp ); 
+		add_recipient( argc, argv, envp );
 
 	}
 #endif /* RECEPIENT_DEBUG */
-    if ( parse_message )
+    if ( parse_message ) {
 		parse_for_recipients( message, envp );
+		if ( debug )
+			(void) fprintf( stderr, "%s\n", message );
+	}
     if ( ! got_a_recipient ) {
 		(void) fprintf( stderr,  "%s: no recipients found\n", argv0 );
 		exit( 1 );
@@ -412,13 +420,13 @@ int main( int argc, char** argv , char** envp) {
 #ifdef DO_RECEIVED
     send_data( received );
 #endif /* DO_RECEIVED */
-	if (strlen(username) <= 20) 
+	if (strlen(username) <= 20)
 		sprintf( xuser, "X-SG-User: %s\n", username);
 
  	sprintf( xopt, "%s", "X-SG-Opt: ");
 	for (ep = envp; *ep; ep++)
 		for (idx = 0; idx<=5; idx++)
-			if (safe_env_lst[idx] && !strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx]))) 
+			if (safe_env_lst[idx] && !strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx])))
 				sprintf( xopt, "%s %s ", xopt, *ep);
 
  	send_data( xuser );
@@ -457,7 +465,7 @@ static int print_argv(int argc, char** argv) {
 		fprintf( stderr, "   Argument %2d: %s\n", a, argv[a]);
 }
 static void usage( int argc, char** argv, char** envp ) {
-	
+
 #ifdef DO_MINUS_SP
 	#ifdef DO_DNS
     char* spflag = "[-s<server>] [-p<port>] ";
@@ -527,7 +535,7 @@ static char* make_received( char* from, char* username, char* hostname ) {
 		(void) fprintf( stderr, "%s: out of memory\n", argv0 );
 		exit( 1 );
 	}
-    (void) snprintf( received, received_size, "Received: (from %s)\n\tby %s (%s);\n\t%s\n\t(sender %s@%s)\n", 
+    (void) snprintf( received, received_size, "Received: (from %s)\n\tby %s (%s);\n\t%s\n\t(sender %s@%s)\n",
 		from, hostname, VERSION, timestamp, username, hostname );
     return received;
 }
@@ -536,18 +544,18 @@ static char* make_received( char* from, char* username, char* hostname ) {
 static void parse_for_recipients( char* message, char** envp ) {
 	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
 
-	// search for To:
+// search for To:
 	if ( pos = strstr(message, "In-Reply-To:") ) {
 		pos += 12;
 		if ( pos = strstr(pos, "To:") )
 			to=pos;
-	} else {	
+	} else {
 		if ( pos = strstr(message, "To:") )
 			to=pos;
 	}
-	if (!to) 
+	if (!to)
 		if ( pos = strstr(message, "to:"))	to=pos;
-	if (!to) 
+	if (!to)
 		if ( pos = strstr(message, "TO:"))	to=pos;
 
 	// search for Cc:
@@ -578,6 +586,7 @@ static void parse_for_recipients( char* message, char** envp ) {
 static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 	char buffer[1000];
 	char buf[1000];
+	char *space_check = NULL;
 	char *to_buf = buffer;
 	int len = strlen(message) - chars_to_remove;
 	int sec_check = 0;
@@ -592,21 +601,21 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 
 	// Walking trough the message, char by char
 	while (len >= 0) {
-/* 
+/*
   We have to match lines like these:
 	To: "mm@siteground.com" <mm@siteground.com>
 	To: "mm@siteground.com" <mm@siteground.com>, m.m@siteground.com
 */
 		if ( *message == ',' || *message == '\n' || *message == '\r' || *message == '\0' ) {
 			// clear the skip flag
-			if ( *message == ',' ) 
+			if ( *message == ',' )
 				skip_to_comma = 0;
 			// do not print if the buffer is empty or containing :(To:, Bcc:, etc.)
 			if ( strlen(buffer) > 0 && strchr(buffer, ':') == NULL) {
 				(void) snprintf( buf, sizeof(buf), "RCPT TO: %s", buffer );
 				send_command( buf );
 				status = read_response();
-				if ( status != 250  && status != 251 ) 
+				if ( status != 250  && status != 251 )
 					(void) fprintf( stderr,  "%s: unexpected response %d to RCPT TO command\n", argv0, status );
 				memset(buffer, 0x00, sizeof(buffer));
 				memset(buf, 0x00, sizeof(buf));
@@ -618,7 +627,7 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 			if ( *message == '\n' ) break;
 		} else {
 			// possible hacking attempt
-			if ( sec_check > 999 ) 
+			if ( sec_check > 999 )
 				exit( 12 );
 			// skip every character until we find comma
 			if ( skip_to_comma ) {
@@ -630,8 +639,14 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 			if ( found_char == 0 && *message == '@' )
 				found_char = 1;
 			if ( found_char && *message == ' ' ) {
-				skip_to_comma = 1;
-				found_char = 0;
+				space_check = message;
+				space_check++;
+				if (*space_check != ',' && *space_check != ' ' )
+					found_char = 1;
+				else {
+					skip_to_comma = 1;
+					found_char = 0;
+				}
 				// goto next character in the message
 				message++;
 				len--;
@@ -645,6 +660,7 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 				sec_check++;
  			}
 		}
+//	"mm@siteground.com" <mm@siteground.com>, m.m@siteground.com, "mm@siteground.com" <mm@siteground.com>, m.m@siteground.com
 		// goto next character in the message
 		message++;
 		len--;
