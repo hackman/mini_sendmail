@@ -863,13 +863,15 @@ static void send_command( char* command ) {
 
 static void send_data( char* data ) {
     int bol;
+	char *start = data;
 
     for ( bol = 1; *data != '\0'; ++data ) {
 		if ( bol && *data == '.' )
 			putc( '.', sockwfp );
 		bol = 0;
 		if ( *data == '\n' ) {
-			putc( '\r', sockwfp );
+			if (data != start && *(data - 1) != '\r')
+				putc( '\r', sockwfp );
 			bol = 1;
 		}
 		putc( *data, sockwfp );

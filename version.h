@@ -3,6 +3,6 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define VERSION "msmtp/0.4.6 02.Jun.2009"
+#define VERSION "msmtp/0.4.7 11.Jul.2011"
 
 #endif /* _VERSION_H_ */
