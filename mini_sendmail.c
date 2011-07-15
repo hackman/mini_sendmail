@@ -103,6 +103,9 @@ static void show_error( char* cause );
 static int has_from( char* message);
 static int has_date( char* message);
 static char *headers_end( char* message );
+static char *find_to( char *message , int start );
+static char *find_cc( char *message, int start );
+static char *find_bcc( char *message, int start );
 
 
 int main( int argc, char** argv , char** envp) {
@@ -566,47 +569,114 @@ static char* make_received( char* from, char* username, char* hostname ) {
 }
 #endif /* DO_RECEIVED */
 
-static void parse_for_recipients( char* message, char** envp ) {
-	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
+static void parse_for_recipients( char * message, char **envp) {
+	int i = 0;
+	char *pos;
 
-// search for To:
-	if ( pos = strstr(message, "In-Reply-To:") ) {
-		pos += 12;
-		if ( pos = strstr(pos, "To:") )
-			to=pos;
-	} else {
-		if ( pos = strstr(message, "To:") )
-			to=pos;
+	while ((pos = find_to(message, i))) {
+		add_recipient(pos, 3, envp);
+		i = pos - message + 3;
 	}
-	if (!to)
-		if ( pos = strstr(message, "to:"))	to=pos;
-	if (!to)
-		if ( pos = strstr(message, "TO:"))	to=pos;
 
-	// search for Cc:
-	if (pos = strstr(message, "Cc:"))		cc=pos;
-	if (!cc)
-		if (pos = strstr(message, "CC:"))	cc=pos;
-	if (!cc)
-		if (pos = strstr(message, "\ncc:"))	{
-			// skip the \n character
-			*++cc;
-			cc=pos;
-		}
+	i = 0;
+	while ((pos = find_cc(message, i))) {
+		add_recipient(pos, 3, envp);
+		i = pos - message + 3;
+	}
 
-	// search for Bcc
-	if (pos = strstr(message, "Bcc:"))		bcc=pos;
-	if (!bcc)
-		if (pos = strstr(message, "BCC:"))	bcc=pos;
-	if (!bcc)
-		if (pos = strstr(message, "bcc:"))	bcc=pos;
-
-	// search for recipients in the found lines
-	if ( to )	add_recipient( to, 3, envp );
-	if ( cc )	add_recipient( cc, 3, envp );
-	if ( bcc )	add_recipient( bcc, 4, envp );
+	i = 0;
+	while ((pos = find_bcc(message, i))) {
+		add_recipient(pos, 4, envp);
+		i = pos - message + 4;
+	}
 }
 
+// Finds the first To:, to: or TO: in the headers and returns a char * to it.
+// Starts searching from start.
+// Returns NULL if no to header is found.
+static char *find_to( char *message, int start ) {
+	static char * to_strings[4] = { "To:", "TO:", "to:", NULL };
+
+	char *end_of_headers = headers_end(message);
+	char *pos = end_of_headers;
+	char *start_pos = message + start;
+	char *tmp;
+
+	int i;
+
+	if (start_pos >= end_of_headers)
+		return NULL;
+
+	for (i = 0; to_strings[i]; i++)
+		if ((tmp = strstr(start_pos, to_strings[i])) &&
+				(tmp == start_pos || *(tmp - 1) == '\n') &&
+				tmp < pos) {
+			pos = tmp;
+		}
+
+	if (pos < end_of_headers)
+		return pos;
+
+	return NULL;
+}
+
+// Finds the first Cc:, CC: or cc: in the headers and returns a char * to it.
+// Starts searching from start.
+// Returns NULL if no to header is found.
+static char *find_cc( char *message, int start ) {
+	static char * cc_strings[4] = { "Cc:", "CC:", "cc:", NULL };
+
+	char *end_of_headers = headers_end(message);
+	char *pos = end_of_headers;
+	char *start_pos = message + start;
+	char *tmp;
+
+	int i;
+
+	if (start_pos >= end_of_headers)
+		return NULL;
+
+	for (i = 0; cc_strings[i]; i++)
+		if ((tmp = strstr(start_pos, cc_strings[i])) &&
+				(tmp == start_pos || *(tmp - 1) == '\n') &&
+				tmp < pos) {
+			pos = tmp;
+		}
+
+	if (pos < end_of_headers)
+		return pos;
+
+	return NULL;
+}
+
+// Finds the first BCC:, bcc: or Bcc: in the headers and returns a char * to it.
+// Starts searching from start.
+// Returns NULL if no to header is found.
+static char *find_bcc( char *message, int start ) {
+	static char * bcc_strings[4] = { "BCC:", "bcc:", "Bcc:", NULL };
+
+	char *end_of_headers = headers_end(message);
+	char *pos = end_of_headers;
+	char *start_pos = message + start;
+	char *tmp;
+
+	int i;
+
+	if (start_pos >= end_of_headers)
+		return NULL;
+
+	for (i = 0; bcc_strings[i]; i++)
+		if ((tmp = strstr(start_pos, bcc_strings[i])) &&
+				(tmp == start_pos || *(tmp - 1) == '\n') &&
+				tmp < pos) {
+			pos = tmp;
+		}
+
+	if (pos < end_of_headers)
+		return pos;
+
+	return NULL;
+}
 
 static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 	char buffer[1000];
