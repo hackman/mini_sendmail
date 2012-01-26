@@ -7,7 +7,7 @@
 BINDIR =	/usr/local/sbin
 MANDIR =	/usr/local/man
 CC =		gcc
-CFLAGS =	-O 
+CFLAGS =	-O -Wall
 LDFLAGS =	-s -static
 LDFLAGS2 =  -s
 LDLIBS =	$(SYSV_LIBS)
