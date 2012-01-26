@@ -1,6 +1,6 @@
 /* mini_sendmail - accept email on behalf of real sendmail
 **
-** Copyright � 1999 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright(r) 1999 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
 ** OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 ** SUCH DAMAGE.
 **
-** Copyright 2008-2009 by Marian Marinov <mm@yuhu.biz>
+** Copyright 2008-2012 by Marian Marinov <mm@yuhu.biz>
 ** The software have been havily modified to fit more complex needs.
 ** The above licence rules still remain the same.
 **
