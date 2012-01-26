@@ -83,6 +83,7 @@ static int sockfd1, sockfd2;
 static FILE* sockrfp;
 static FILE* sockwfp;
 static int got_a_recipient;
+static int skip_quoted_text;
 
 
 /* Forwards. */
@@ -140,6 +141,7 @@ int main( int argc, char** argv , char** envp) {
     debug = 0;
     timeout = DEFAULT_TIMEOUT;
     argn = 1;
+	skip_quoted_text = 0;
 
 	char *safe_env_lst[] = {
 		"USER",
@@ -161,6 +163,8 @@ int main( int argc, char** argv , char** envp) {
 	for (i=0; i < argc; i++) {
 			if ( strncmp( argv[i], "-d", 2 ) == 0 )
 				debug = 1;
+			else if ( strncmp( argv[i], "-c", 2 ) == 0 )
+				skip_quoted_text = 1;
 			else if ( strncmp( argv[i], "-V", 2 ) == 0 ) {
 				printf("Version: %s\n", VERSION);
 				return(0);
@@ -176,6 +180,9 @@ int main( int argc, char** argv , char** envp) {
 					printf("  -d debug\n");
 					printf("  -v verbose\n");
 					printf("  -V version\n");
+					printf("  -s server\n");
+					printf("  -p port\n");
+					printf("  -c skip quoted text\n");
 					printf("  -T timeout (default: 60)\n");
 					printf("  -t parse the whole message searching for To: Cc: Bcc:\n");
 					printf("  -f can be used in any format if the last part of that is the email address\n");
@@ -593,6 +600,7 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 	int status;
 	int found_char = 0;
 	int skip_to_comma = 0;
+	int dont_skip_quotes = 1;
 
 	// Clear the buffer
  	memset(buffer, 0x00, sizeof(buffer));
@@ -653,12 +661,21 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 				continue;
 			}
 			// copy the current character into the TO buffer
- 			if ( *message != '"' ) {
-				*to_buf = *message;
-				// goto next character in the TO buffer
-				to_buf++;
-				sec_check++;
- 			}
+			if ( *message == '"' ) {
+				if (skip_quoted_text) {
+					if (dont_skip_quotes)
+						dont_skip_quotes=0;
+					else
+						dont_skip_quotes=1;
+				}
+			} else {
+				if (dont_skip_quotes) {
+					*to_buf = *message;
+					// goto next character in the TO buffer
+					to_buf++;
+					sec_check++;
+				}
+			}
 		}
 //	"mm@siteground.com" <mm@siteground.com>, m.m@siteground.com, "mm@siteground.com" <mm@siteground.com>, m.m@siteground.com
 		// goto next character in the message
