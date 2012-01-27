@@ -51,6 +51,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #ifdef DO_RECEIVED
 #include <time.h>
@@ -69,7 +70,7 @@
 
 /* Globals. */
 static char* argv0;
-static char* fake_from;
+//static char* fake_from;
 #ifdef RECEPIENT_DEBUG
 static char* fake_to;
 #endif
@@ -87,9 +88,9 @@ static int skip_quoted_text;
 
 
 /* Forwards. */
-static void usage( int argc, char** argv, char** envp );
-static int print_env( char** envp );
-static int print_argv( int argc, char** argv );
+//static void usage( int argc, char** argv, char** envp );
+//static void print_env( char** envp );
+//static void print_argv( int argc, char** argv );
 static char* slurp_message( void );
 #ifdef DO_RECEIVED
 static char* make_received( char* from, char* username, char* hostname );
@@ -106,9 +107,11 @@ static void show_error( char* cause );
 
 
 int main( int argc, char** argv , char** envp) {
-    int argn;
+#ifdef RECEPIENT_DEBUG
+    int argn = 1;
+#endif
 	int status;
-	int i, h, j, from_count, idx = 0;
+	int i, h, j, from_count = 0, idx = 0;
     char* message;
 #ifdef DO_RECEIVED
     char* received;
@@ -140,7 +143,6 @@ int main( int argc, char** argv , char** envp) {
     verbose = 0;
     debug = 0;
     timeout = DEFAULT_TIMEOUT;
-    argn = 1;
 	skip_quoted_text = 0;
 
 	char *safe_env_lst[] = {
@@ -194,7 +196,7 @@ int main( int argc, char** argv , char** envp) {
 				timeout = atoi( &(argv[i][2]) );
 			else if ( strncmp( argv[i], "-v", 2 ) == 0 )
 				verbose = 1;
-			else if ( strncmp( argv[i], "-f", 2 ) == 0)
+			else if ( strncmp( argv[i], "-f", 2 ) == 0) {
 				if ( argv[i][2] != '\0' ) {
 					if ( strlen(argv[i]) < 998 ) {
 						for ( h=2; h <= strlen(argv[i]); h++)
@@ -264,6 +266,7 @@ int main( int argc, char** argv , char** envp) {
 				}
 				if ( debug )
 					printf("ARGV[%d]: |%s| %d\n", i, argv[i], strlen(argv[i]));
+			}
 	}
 
 	if ( timeout == 0 )
@@ -271,8 +274,8 @@ int main( int argc, char** argv , char** envp) {
 
 	if ( debug )
 #ifdef DO_MINUS_SP
-		printf("parse_message: %d\nserver: %p port: %p/%d\ntimeout: %d verbose: %d\n",
-			parse_message, server, port, port, timeout, verbose);
+		printf("parse_message: %d\nserver: %s port: %d\ntimeout: %d verbose: %d\n",
+			parse_message, server, port, timeout, verbose);
 #else
 		printf("parse_message: %d\ntimeout: %d verbose: %d\n",
 			parse_message, timeout, verbose);
@@ -372,7 +375,7 @@ int main( int argc, char** argv , char** envp) {
 	if ( strchr( to, '@' ) ) {
 		j = strlen( to );
 		if ( debug )
-			printf("TO: %s\n", to, j);
+			printf("TO: %s(%d)\n", to, j);
 		h=0;
 		for (i=0; i <= j; i++) {
 			if ( to[i] == ' ' && to[i+1] != '\0' )
@@ -457,7 +460,8 @@ int main( int argc, char** argv , char** envp) {
     exit( 0 );
 }
 
-static int print_env(char** envp) {
+/*
+static void print_env(char** envp) {
 	int a = 0;
     fprintf( stderr, "The environment is as follows:\n");
     while (envp[a] != NULL) {
@@ -465,7 +469,7 @@ static int print_env(char** envp) {
 	}
 }
 
-static int print_argv(int argc, char** argv) {
+static void print_argv(int argc, char** argv) {
 	int a;
 	printf("There are %d arguments:\n", argc-1);
 	for (a=1; a<argc; a++)
@@ -476,12 +480,12 @@ static void usage( int argc, char** argv, char** envp ) {
 #ifdef DO_MINUS_SP
 	#ifdef DO_DNS
     char* spflag = "[-s<server>] [-p<port>] ";
-	#else /* DO_DNS */
+	#else // DO_DNS
     char* spflag = "[-s<server_ip>] [-p<port>] ";
-	#endif /* DO_DNS */
-#else /* DO_MINUS_SP */
+	#endif // DO_DNS 
+#else // DO_MINUS_SP 
     char* spflag = "";
-#endif /* DO_MINUS_SP */
+#endif // DO_MINUS_SP 
     (void) fprintf( stderr, "usage:  %s [-f<name>] [-t] %s[-T<timeout>] [-v] [address ...]\n", argv0, spflag );
 	if ( debug ) {
 		print_argv ( argc, argv );
@@ -489,7 +493,7 @@ static void usage( int argc, char** argv, char** envp ) {
 	}
     exit( 1 );
 }
-
+*/
 
 static char* slurp_message( void ) {
     char* message;
@@ -552,36 +556,36 @@ static void parse_for_recipients( char* message, char** envp ) {
 	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
 
 // search for To:
-	if ( pos = strstr(message, "In-Reply-To:") ) {
+	if ( (pos = strstr(message, "In-Reply-To:")) ) {
 		pos += 12;
-		if ( pos = strstr(pos, "To:") )
+		if ( (pos = strstr(pos, "To:")) )
 			to=pos;
 	} else {
-		if ( pos = strstr(message, "To:") )
+		if ( (pos = strstr(message, "To:")) )
 			to=pos;
 	}
 	if (!to)
-		if ( pos = strstr(message, "to:"))	to=pos;
+		if ( (pos = strstr(message, "to:")) )	to=pos;
 	if (!to)
-		if ( pos = strstr(message, "TO:"))	to=pos;
+		if ( (pos = strstr(message, "TO:")) )	to=pos;
 
 	// search for Cc:
-	if (pos = strstr(message, "Cc:"))		cc=pos;
+	if ( (pos = strstr(message, "Cc:")) )		cc=pos;
 	if (!cc)
-		if (pos = strstr(message, "CC:"))	cc=pos;
+		if ( (pos = strstr(message, "CC:")) )	cc=pos;
 	if (!cc)
-		if (pos = strstr(message, "\ncc:"))	{
+		if ( (pos = strstr(message, "\ncc:")) )	{
 			// skip the \n character
-			*++cc;
+			cc++;
 			cc=pos;
 		}
 
 	// search for Bcc
-	if (pos = strstr(message, "Bcc:"))		bcc=pos;
+	if ( (pos = strstr(message, "Bcc:")) )		bcc=pos;
 	if (!bcc)
-		if (pos = strstr(message, "BCC:"))	bcc=pos;
+		if ( (pos = strstr(message, "BCC:")) )	bcc=pos;
 	if (!bcc)
-		if (pos = strstr(message, "bcc:"))	bcc=pos;
+		if ( (pos = strstr(message, "bcc:")) )	bcc=pos;
 
 	// search for recipients in the found lines
 	if ( to )	add_recipient( to, 3, envp );
