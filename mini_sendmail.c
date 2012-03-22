@@ -179,7 +179,16 @@ int main( int argc, char** argv , char** envp) {
 				if ( debug )
 					printf("ARGV[%d](%s): Ignored!\n", i, argv[i]);	/* ignore */
 			} else if ( strncmp( argv[i], "--help", 6 ) == 0 ) {
-					printf("Usage: %s [-f name] [-v] [-d] [-t] [-T]\n", argv[0]);
+#ifdef DO_MINUS_SP
+	#ifdef DO_DNS
+					char* spflag = "[-s<server>] [-p<port>] ";
+	#else /* DO_DNS */
+					char* spflag = "[-s<server_ip>] [-p<port>] ";
+	#endif /* DO_DNS */
+#else /* DO_MINUS_SP */
+					char* spflag = "";
+#endif /* DO_MINUS_SP */
+					printf("Usage: %s [-f name] [-v] [-d] [-t] [-T] %s\n", argv[0], spflag);
 					printf("  -i, -oi, -n and -- are ignored\n");
 					printf("  -d debug\n");
 					printf("  -v verbose\n");
@@ -195,7 +204,7 @@ int main( int argc, char** argv , char** envp) {
 				timeout = atoi( &(argv[i][2]) );
 			else if ( strncmp( argv[i], "-v", 2 ) == 0 )
 				verbose = 1;
-			else if ( strncmp( argv[i], "-f", 2 ) == 0)
+			else if ( strncmp( argv[i], "-f", 2 ) == 0) {
 				if ( argv[i][2] != '\0' ) {
 					if ( strlen(argv[i]) < 998 ) {
 						for ( h=2; h <= strlen(argv[i]); h++)
@@ -251,11 +260,12 @@ int main( int argc, char** argv , char** envp) {
 						}
 					}
 				}
+			}
 #ifdef DO_MINUS_SP
-				else if ( strncmp( argv[i], "-s", 2 ) == 0 && argv[i][2] != '\0' )
-					server = &(argv[i][2]);
-				else if ( strncmp( argv[i], "-p", 2 ) == 0 && argv[i][2] != '\0' )
-					port = atoi( &(argv[i][2]) );
+			else if ( strncmp( argv[i], "-s", 2 ) == 0 && argv[i][2] != '\0' )
+				server = &(argv[i][2]);
+			else if ( strncmp( argv[i], "-p", 2 ) == 0 && argv[i][2] != '\0' )
+				port = atoi( &(argv[i][2]) );
 #endif /* DO_MINUS_SP */
 				if ( ! got_a_recipient && i == argc-1 && parse_message != 1 ) {
 					got_a_recipient++;
