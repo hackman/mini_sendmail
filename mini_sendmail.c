@@ -53,9 +53,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#ifdef DO_RECEIVED
 #include <time.h>
-#endif /* DO_RECEIVED */
 #ifdef DO_GETPWUID
 #include <pwd.h>
 #endif /* DO_GETPWUID */
@@ -104,6 +102,12 @@ static void send_data( char* data );
 static void send_done( void );
 static void sigcatch( int sig );
 static void show_error( char* cause );
+static int has_from( char* message);
+static int has_date( char* message);
+static char *headers_end( char* message );
+static char *find_to( char *message , int start );
+static char *find_cc( char *message, int start );
+static char *find_bcc( char *message, int start );
 
 
 int main( int argc, char** argv , char** envp) {
@@ -128,6 +132,10 @@ int main( int argc, char** argv , char** envp) {
 	char to_buf[1000] = "";
 	char *to_ptr = to_buf;
     char buf[2000] = "";
+	int has_from_header = 0;
+	int has_date_header = 0;
+	char date_header[50];
+	char from_header[1010];
 
     /* Parse args. */
     argv0 = argv[0];
@@ -325,6 +333,22 @@ int main( int argc, char** argv , char** envp) {
 #ifdef DO_RECEIVED
     received = make_received( from, username, hostname );
 #endif /* DO_RECEIVED */
+	has_from_header = has_from(message);
+	has_date_header = has_date(message);
+
+	if (! has_from_header) {
+		snprintf(from_header, sizeof(from_header), "From: %s\n", from);
+	}
+
+	if (! has_date_header) {
+		time_t t;
+		struct tm *tmp;
+
+		t = time(NULL);
+		tmp = localtime(&t);
+
+		strftime(date_header, sizeof(date_header), "Date: %a, %d %b %Y %T %z\n", tmp);
+	}
 
     (void) signal( SIGALRM, sigcatch );
 
@@ -439,6 +463,10 @@ int main( int argc, char** argv , char** envp) {
 			if (safe_env_lst[idx] && !strncmp(*ep, safe_env_lst[idx], strlen(safe_env_lst[idx])))
 				sprintf( xopt, "%s %s ", xopt, *ep);
 
+	if (! has_from_header)
+		send_data( from_header );
+	if (! has_date_header)
+		send_data( date_header );
  	send_data( xuser );
 	send_data( xopt );
     send_data( message );
@@ -553,46 +581,113 @@ static char* make_received( char* from, char* username, char* hostname ) {
 #endif /* DO_RECEIVED */
 
 static void parse_for_recipients( char* message, char** envp ) {
-	char *pos = NULL, *to = NULL, *cc = NULL, *bcc = NULL;
+	int i = 0;
+	char *pos;
 
-// search for To:
-	if ( (pos = strstr(message, "In-Reply-To:")) ) {
-		pos += 12;
-		if ( (pos = strstr(pos, "To:")) )
-			to=pos;
-	} else {
-		if ( (pos = strstr(message, "To:")) )
-			to=pos;
+	while ((pos = find_to(message, i))) {
+		add_recipient(pos, 3, envp);
+		i = pos - message + 3;
 	}
-	if (!to)
-		if ( (pos = strstr(message, "to:")) )	to=pos;
-	if (!to)
-		if ( (pos = strstr(message, "TO:")) )	to=pos;
 
-	// search for Cc:
-	if ( (pos = strstr(message, "Cc:")) )		cc=pos;
-	if (!cc)
-		if ( (pos = strstr(message, "CC:")) )	cc=pos;
-	if (!cc)
-		if ( (pos = strstr(message, "\ncc:")) )	{
-			// skip the \n character
-			cc++;
-			cc=pos;
-		}
+	i = 0;
+	while ((pos = find_cc(message, i))) {
+		add_recipient(pos, 3, envp);
+		i = pos - message + 3;
+	}
 
-	// search for Bcc
-	if ( (pos = strstr(message, "Bcc:")) )		bcc=pos;
-	if (!bcc)
-		if ( (pos = strstr(message, "BCC:")) )	bcc=pos;
-	if (!bcc)
-		if ( (pos = strstr(message, "bcc:")) )	bcc=pos;
-
-	// search for recipients in the found lines
-	if ( to )	add_recipient( to, 3, envp );
-	if ( cc )	add_recipient( cc, 3, envp );
-	if ( bcc )	add_recipient( bcc, 4, envp );
+	i = 0;
+	while ((pos = find_bcc(message, i))) {
+		add_recipient(pos, 4, envp);
+		i = pos - message + 4;
+	}
 }
 
+// Finds the first To:, to: or TO: in the headers and returns a char * to it.
+// Starts searching from start.
+// Returns NULL if no to header is found.
+static char *find_to( char *message, int start ) {
+	static char * to_strings[4] = { "To:", "TO:", "to:", NULL };
+
+	char *end_of_headers = headers_end(message);
+	char *pos = end_of_headers;
+	char *start_pos = message + start;
+	char *tmp;
+
+	int i;
+
+	if (start_pos >= end_of_headers)
+		return NULL;
+
+	for (i = 0; to_strings[i]; i++)
+		if ((tmp = strstr(start_pos, to_strings[i])) &&
+				(tmp == start_pos || *(tmp - 1) == '\n') &&
+				tmp < pos) {
+			pos = tmp;
+		}
+
+	if (pos < end_of_headers)
+		return pos;
+
+	return NULL;
+}
+
+// Finds the first Cc:, CC: or cc: in the headers and returns a char * to it.
+// Starts searching from start.
+// Returns NULL if no to header is found.
+static char *find_cc( char *message, int start ) {
+	static char * cc_strings[4] = { "Cc:", "CC:", "cc:", NULL };
+
+	char *end_of_headers = headers_end(message);
+	char *pos = end_of_headers;
+	char *start_pos = message + start;
+	char *tmp;
+
+	int i;
+
+	if (start_pos >= end_of_headers)
+		return NULL;
+
+	for (i = 0; cc_strings[i]; i++)
+		if ((tmp = strstr(start_pos, cc_strings[i])) &&
+				(tmp == start_pos || *(tmp - 1) == '\n') &&
+				tmp < pos) {
+			pos = tmp;
+		}
+
+	if (pos < end_of_headers)
+		return pos;
+
+	return NULL;
+}
+
+// Finds the first BCC:, bcc: or Bcc: in the headers and returns a char * to it.
+// Starts searching from start.
+// Returns NULL if no to header is found.
+static char *find_bcc( char *message, int start ) {
+	static char * bcc_strings[4] = { "BCC:", "bcc:", "Bcc:", NULL };
+
+	char *end_of_headers = headers_end(message);
+	char *pos = end_of_headers;
+	char *start_pos = message + start;
+	char *tmp;
+
+	int i;
+
+	if (start_pos >= end_of_headers)
+		return NULL;
+
+	for (i = 0; bcc_strings[i]; i++)
+		if ((tmp = strstr(start_pos, bcc_strings[i])) &&
+				(tmp == start_pos || *(tmp - 1) == '\n') &&
+				tmp < pos) {
+			pos = tmp;
+		}
+
+	if (pos < end_of_headers)
+		return pos;
+
+	return NULL;
+}
 
 static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 	char buffer[1000];
@@ -884,13 +979,15 @@ static void send_command( char* command ) {
 
 static void send_data( char* data ) {
     int bol;
+	char *start = data;
 
     for ( bol = 1; *data != '\0'; ++data ) {
 		if ( bol && *data == '.' )
 			putc( '.', sockwfp );
 		bol = 0;
 		if ( *data == '\n' ) {
-			putc( '\r', sockwfp );
+			if (data != start && *(data - 1) != '\r')
+				putc( '\r', sockwfp );
 			bol = 1;
 		}
 		putc( *data, sockwfp );
@@ -915,4 +1012,60 @@ static void show_error( char* cause ) {
     (void) snprintf( buf, sizeof(buf), "%s: %s", argv0, cause );
     perror( buf );
     exit( 1 );
+}
+
+/* Returns a pointer to the first occurance of an empty line in the message.
+ * This should be exactly the place where headers end.
+ *
+ * Caches the results for faster answers to consecutive requests for the
+ * same message.
+ */
+static char *headers_end( char* message ) {
+	static char *end_markers[4] = { "\n\n", "\n\r\n", NULL };
+	static char *cache = (char *) -1;
+	static char *cached_message = NULL;
+
+	char *headers_end;
+	char *message_end;
+	char *tmp;
+	int i;
+
+	if (cache != (char *)-1 && cached_message == message)
+		return cache;
+
+	message_end = headers_end = message + strlen(message);
+	for (i = 0; end_markers[i]; i++) {
+		tmp = strstr(message, end_markers[i]);
+		if (tmp && tmp < headers_end)
+			headers_end = tmp;
+	}
+
+
+	if (headers_end == message_end)
+		headers_end = message;
+
+	cache = headers_end;
+	cached_message = message;
+
+	return headers_end;
+}
+
+static int has_from( char * message) {
+	char *pos;
+	if ((pos = strstr(message, "From:")) &&
+			(pos == message || *(pos-1) == '\n' || *(pos-1)=='\r' ) &&
+			pos < headers_end(message)) {
+		return 1;
+	}
+	return 0;
+}
+
+static int has_date( char * message) {
+	char *pos;
+	if ((pos = strstr(message, "Date:")) &&
+			(pos == message || *(pos-1) == '\n' || *(pos-1)=='\r' ) &&
+			pos < headers_end(message)) {
+		return 1;
+	}
+	return 0;
 }
