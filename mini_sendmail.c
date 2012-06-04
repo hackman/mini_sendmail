@@ -284,7 +284,6 @@ int main( int argc, char** argv , char** envp) {
 				}
 				if ( debug )
 					printf("ARGV[%d]: |%s| %d\n", i, argv[i], strlen(argv[i]));
-			}
 	}
 
 	if ( timeout == 0 )
