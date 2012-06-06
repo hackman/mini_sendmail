@@ -769,7 +769,7 @@ static void add_recipient( char* message, int chars_to_remove, char** envp ) {
 				continue;
 			}
 			// copy the current character into the TO buffer
-			if ( *message == '"' ) {
+			if ( *message == '"' || *message == '\'') {
 				if (skip_quoted_text) {
 					if (dont_skip_quotes)
 						dont_skip_quotes=0;
